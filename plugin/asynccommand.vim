@@ -66,7 +66,9 @@ endfunction
 "   - uses the current make program
 "   - optional parameter for make target(s)
 function! s:AsyncMake(target)
-    let make_cmd = &makeprg ." ". a:target
+    "let make_cmd = &makeprg ." ". a:target
+    " jsholmes: changed this to fix it not using shellpipe correctly
+    let make_cmd = &makeprg ." ". a:target . "|sed 's/^.*build\\///'"
     let title = 'Make: '
     if a:target == ''
         let title .= "(default)"
