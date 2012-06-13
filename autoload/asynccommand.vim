@@ -20,7 +20,7 @@ if has("win32")
     function! s:Async_Single_Impl(tool_cmd)
         silent exec "!start /min cmd /c \"".a:tool_cmd."\""
     endfunction
-    let s:result_var = '%ERRORLEVEL%'
+    let s:result_var = '\%ERRORLEVEL\%'
 else
     " Works in linux (Ubuntu 10.04)
     function! s:Async_Impl(tool_cmd, vim_cmd)
@@ -43,7 +43,7 @@ function! asynccommand#run(command, ...)
     if len(v:servername) == 0
         echo "Error: AsyncCommand requires vim to be started with a servername."
         echo "       See :help --servername"
-        return
+        return ""
     endif
     if a:0 == 1
         let Fn = a:1
@@ -53,7 +53,14 @@ function! asynccommand#run(command, ...)
         let env = a:2
     else
         " execute in background
-        return s:Async_Single_Impl(a:command)
+        call s:Async_Single_Impl(a:command)
+		if !has("gui_running")
+			" In console vim, clear and redraw after running a background program
+			" to remove screen clear from running external program. (Vim stops
+			" being visible.)
+			redraw!
+		endif
+		return ""
     endif
 
     " String together and execute.
@@ -66,7 +73,7 @@ function! asynccommand#run(command, ...)
     endif
 
     " Grab output and error in case there's something we should see
-    let tool_cmd = a:command . ' ' . printf(shellredir, temp_file)
+    let tool_cmd = '(' . a:command . ') ' . printf(shellredir, temp_file)
 
     if type(Fn) == type({})
                 \ && has_key(Fn, 'get')
@@ -89,6 +96,13 @@ function! asynccommand#run(command, ...)
     let vim_cmd = prg . " --servername " . v:servername . " --remote-expr \"AsyncCommandDone('" . temp_file . "', " . s:result_var . ")\" "
 
     call s:Async_Impl(tool_cmd, vim_cmd)
+    if !has("gui_running")
+        " In console vim, clear and redraw after running a background program
+        " to remove screen clear from running external program. (Vim stops
+        " being visible.)
+        redraw!
+    endif
+	return ""
 endfunction
 
 function! asynccommand#done(temp_file_name, return_code)
