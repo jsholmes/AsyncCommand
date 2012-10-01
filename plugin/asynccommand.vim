@@ -32,7 +32,8 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 function! AsyncCommandDone(file, return_code)
-    return asynccommand#done(a:file, a:return_code)
+    call asynccommand#done(a:file, a:return_code)
+    return ""
 endfunction
 
 command! -nargs=+ -complete=shellcmd AsyncCommand call asynccommand#run(<q-args>)
@@ -164,4 +165,4 @@ endfunction
 
 let &cpo = s:save_cpo
 
-"vi:et:sw=4 ts=4
+" vi: et sw=4 ts=4

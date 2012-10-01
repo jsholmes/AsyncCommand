@@ -41,8 +41,15 @@ function! asynccommand#run(command, ...)
     "   done on command completion.
     "   - [dict] will be passed to function.
     if len(v:servername) == 0
-        echo "Error: AsyncCommand requires vim to be started with a servername."
+        echohl Error
+        echo "Error: AsyncCommand requires +clientserver and needs a value for v:servername."
         echo "       See :help --servername"
+        let server = 'x11'
+        if has("win32")
+            let server = 'w32'
+        endif
+        echo "       and :help ". server ."-clientserver"
+        echohl
         return ""
     endif
     if a:0 == 1
@@ -85,12 +92,22 @@ function! asynccommand#run(command, ...)
         let s:receivers[temp_file] = {'func': Fn, 'dict': env}
     endif
 
+    " Use the configured command if available, otherwise try to guess what's
+    " running.
     if exists('g:asynccommand_prg')
         let prg = g:asynccommand_prg
-    elseif has("gui_macvim") && executable('mvim')
+    elseif has("gui_running") && has("gui_macvim") && executable('mvim')
         let prg = "mvim"
-    else
+    elseif has("gui_running") && executable('gvim')
+        let prg = "gvim"
+    elseif executable('vim')
         let prg = "vim"
+    else
+        echohl Error
+        echo "AsyncCommand failed to find Vim: Neither vim, gvim, nor mvim are in your path."
+        echo "Update your PATH or set g:asynccommand_prg to your vim."
+        echohl
+        return ""
     endif
 
     let vim_cmd = prg . " --servername " . v:servername . " --remote-expr \"AsyncCommandDone('" . temp_file . "', " . s:result_var . ")\" "
@@ -152,4 +169,4 @@ function! asynccommand#tab_restore(env)
     return env
 endfunction
 
-"vi:et:sw=4 ts=4
+" vi: et sw=4 ts=4
