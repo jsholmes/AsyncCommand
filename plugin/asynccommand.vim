@@ -36,11 +36,9 @@ function! AsyncCommandDone(file, return_code)
     return ""
 endfunction
 
+command! AsyncPending call asynccommand#open_pending()
+
 command! -nargs=+ -complete=shellcmd AsyncCommand call asynccommand#run(<q-args>)
-
-" Examples below
-" ==============
-
 command! -nargs=+ -complete=file AsyncGrep call s:AsyncGrep(<q-args>)
 command! -nargs=+ -complete=file -complete=shellcmd AsyncShell call s:AsyncShell(<q-args>)
 command! -nargs=* AsyncMake call s:AsyncMake(<q-args>)
@@ -52,16 +50,31 @@ command! -nargs=1 -complete=tag AsyncCscopeFindX call s:AsyncCscopeFindX(<q-args
 
 if (! exists("no_plugin_maps") || ! no_plugin_maps) &&
             \ (! exists("no_asynccommand_maps") || ! no_asynccommand_maps)
-    nmap <unique> <A-S-g> :AsyncCscopeFindSymbol <C-r>=expand('<cword>')<CR><CR>
+    nnoremap <unique> <A-S-g> :AsyncCscopeFindSymbol <C-r>=expand('<cword>')<CR><CR>
 endif
 
 """"""""""""""""""""""
 " Actual implementations
 
+" Fill in $* pattern for prg commands
+" grepprg and makeprg both allow an optional placeholder '$*' to specify where
+" arguments are included. If omitted, append a space and the arguments to the
+" end of the prg command.
+function! s:InsertArgumentsIntoPrgCmd(prg_command, arguments)
+    let placeholder_re = '\V$*'
+    let cmd = a:prg_command
+    if match(cmd, placeholder_re) < 0
+        let cmd .= ' $*'
+    endif
+
+    return substitute(cmd, placeholder_re, a:arguments, 'g')
+endf
+
+
 " Grep
 "   - open result in quickfix
 function! s:AsyncGrep(query)
-    let grep_cmd = "grep --line-number --with-filename ".a:query
+    let grep_cmd = s:InsertArgumentsIntoPrgCmd(&grepprg, a:query)
     call asynccommand#run(grep_cmd, asynchandler#quickfix(&grepformat, '[Found: %s] grep ' . a:query))
 endfunction
 
@@ -75,9 +88,7 @@ endfunction
 "   - uses the current make program
 "   - optional parameter for make target(s)
 function! s:AsyncMake(target)
-    "let make_cmd = &makeprg ." ". a:target
-    " jsholmes: changed this to fix it not using shellpipe correctly
-    let make_cmd = &makeprg ." ". a:target . "|sed 's/^.*build\\///'"
+    let make_cmd = s:InsertArgumentsIntoPrgCmd(&makeprg, a:target)
     let title = 'Make: '
     if a:target == ''
         let title .= "(default)"

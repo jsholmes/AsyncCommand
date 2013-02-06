@@ -25,12 +25,50 @@ an X11 server is required to use |+clientserver|. See |x11-clientserver| and
 						       *asynccommand-commands*
 Commands~
 
+:AsyncPending					               *:AsyncPending*
+                Open the preview window with a listing of the output files for
+                the currently active asynccommands. Run again to refresh the
+                listing. Commands like AsyncCommand that don't have a
+                completion handler are not included.
+
 :AsyncCommand {cmd}					       *:AsyncCommand*
 		Execute shell {cmd} in the background.
 
 :AsyncShell {cmd}					         *:AsyncShell*
                 Execute shell {cmd} in the background. When it completes, open
                 the result in a split window.
+                Completes shell commands.
+
+:AsyncGrep [arguments]                                            *:AsyncGrep*
+                Run a grep command in the background using 'grepprg'. On
+                completion, the results are loaded in the quickfix. The window
+                is titled with the query.
+                Completes filenames.
+
+:AsyncMake [arguments]                                            *:AsyncMake*
+                Run a build in the background using 'makeprg'. On completion,
+                the build output is loaded in the quickfix. The window is
+                titled with the build target.
+
+:AsyncCscopeFindX {querytype} {name}                       *:AsyncCscopeFindX*
+                Run a cscope search in the background using 'cscopeprg'. On
+                completion, the results are loaded in the quickfix. The window
+                is titled with the query.
+                Usage is the same as the |cscope-find| command: Expects the
+                character describing the query type and the query name. For
+                example, to search for the functions called by main():
+>
+    :AsyncCscopeFindX d main
+<
+                Completes tags.
+
+:AsyncCscopeFindSymbol {name}                         *:AsyncCscopeFindSymbol*
+                Same as AsyncCscopeFindSymbol but automatically prepends 's'.
+                Just expects a symbol name.
+
+:AsyncCscopeFindCalls {name}                           *:AsyncCscopeFindCalls*
+                Same as AsyncCscopeFindSymbol but automatically prepends 'c'.
+                Just expects a function name.
 
 						      *asynccommand-functions*
 Functions~
@@ -136,6 +174,24 @@ g:asynccommand_prg                                        *g:asynccommand_prg*
 		capture data from backgrounded commands.  AsyncCommand is
 		compatible with |macvim| and will use mvim if it is available.
 		See |mvim| for setup.
+
+statusline                                           *asynccommand-statusline*
+                Add %{asynccommand#statusline()} to your 'statusline' to show
+                the pending command count.
+
+g:asynccommand_statusline                          *g:asynccommand_statusline*
+                Default: 'Pending:%d'
+                A |printf| format string that defines how to display the
+                number of commands running in the background for
+                |asynccommand-statusline|. Must include a "%d" where you want
+                the count of pending commands.
+
+g:asynccommand_statusline_autohide        *g:asynccommand_statusline_autohide*
+                Default: 0
+                When enabled, uses no text for |asynccommand-statusline| when
+                there are no pending commands. May look strange if your
+                'statusline' adds separators between segments (e.g., the
+                |Powerline| plugin).
 
 shellredir                                           *asynccommand-shellredir*
 		You may find it useful to change vim's |shellredir| setting to

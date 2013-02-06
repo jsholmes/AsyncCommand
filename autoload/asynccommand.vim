@@ -11,6 +11,14 @@ let g:loaded_autoload_asynccommand = 1
 
 let s:receivers = {}
 
+if !exists("g:asynccommand_statusline")
+    let g:asynccommand_statusline = 'Pending:%d'
+endif
+
+if !exists("g:asynccommand_statusline_autohide")
+    let g:asynccommand_statusline_autohide = 0
+endif
+
 " Basic background task running is different on each platform
 if has("win32")
     " Works in Windows (Win7 x64)
@@ -132,7 +140,7 @@ function! asynccommand#done(temp_file_name, return_code)
         call call(r.func, [a:temp_file_name])
     endif
     unlet s:receivers[a:temp_file_name]
-    delete a:temp_file_name
+    call delete(a:temp_file_name)
 endfunction
 
 function! asynccommand#tab_restore(env)
@@ -167,6 +175,51 @@ function! asynccommand#tab_restore(env)
         endtry
     endfunction
     return env
+endfunction
+
+function! asynccommand#statusline()
+    let n_pending_jobs = len(s:receivers)
+    if g:asynccommand_statusline_autohide && n_pending_jobs == 0
+        return ''
+    endif
+
+    return printf(g:asynccommand_statusline, n_pending_jobs)
+endfunction
+
+" Return a string with a header and list of the output files and title (if
+" available) for all pending commands.
+function! s:create_pending_listing()
+    let out  = "Pending Output Files\n"
+    let out .= "====================\n"
+    let out .= "Commands (identified by window title if available) are writing to these files.\n"
+    let out .= "\n"
+    for [fname, handler] in items(s:receivers)
+        let out .= fname
+        try
+            let id = handler.dict.env.title
+        catch /Key not present in Dictionary/
+            let id = 'untitled'
+        endtry
+        let out .= printf("\t- %s\n", id)
+    endfor
+    return out
+endfunction
+
+function! asynccommand#open_pending()
+    silent pedit _AsyncPending_
+    wincmd P
+    1,$delete
+
+    silent 0put =s:create_pending_listing()
+
+    " Prevent use of the buffer as a file (to ensure if the file exists, it's
+    " not saved and to prevent it from being modified -- we don't support
+    " cancelling). 
+    setlocal buftype=nofile
+    setlocal bufhidden=wipe
+    setlocal noswapfile
+    setlocal nobuflisted
+    setlocal readonly
 endfunction
 
 " vi: et sw=4 ts=4
